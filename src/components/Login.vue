@@ -8,6 +8,7 @@
       <!-- 表单区域 -->
       <!-- 输入框 -->
       <el-form
+        ref="loginFormRef"
         :model="login_form"
         :rules="rulesForm"
         label-width="0px"
@@ -28,8 +29,8 @@
         </el-form-item>
         <!-- 按钮 -->
         <el-form-item class="btns">
-          <el-button type="primary">登录</el-button>
-          <el-button type="info">注册</el-button>
+          <el-button type="primary" @click="loginForm">登录</el-button>
+          <el-button type="info" @click="resatForm">重置</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -42,8 +43,8 @@ export default {
     return {
       // 这是登录表单的数据绑定
       login_form: {
-        username: '',
-        password: ''
+        username: 'admin',
+        password: '123456'
       },
       rulesForm: {
         username: [
@@ -52,9 +53,31 @@ export default {
         ],
         password: [
           { required: true, message: '请输密码', trigger: 'blur' },
-          { min: 6, max: 19, message: '长度在 6 到 19 个字符', trigger: 'blur' }
+          {
+            min: 6,
+            max: 19,
+            message: '长度在 6 到 19 个字符',
+            trigger: 'blur'
+          }
         ]
       }
+    }
+  },
+  methods: {
+    resatForm () {
+      this.$refs.loginFormRef.resetFields()
+    },
+
+    loginForm () {
+      this.$refs.loginFormRef.validate(async (valid) => {
+        if (!valid) return
+        // 设置表单验证
+        const { data: res } = await this.$http.post('login', this.login_form)
+        if (res.meta.status !== 200) return res.$message.error.msg
+        this.$message.success('登录成功')
+        window.sessionStorage.setItem('token', res.data.token)
+        this.$router.push('/home')
+      })
     }
   }
 }
