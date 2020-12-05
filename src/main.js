@@ -7,6 +7,10 @@ import './assets/styles/style.css'
 
 import 'element-ui/lib/theme-chalk/index.css'
 
+import './util/request.js'
+
+import './assets/fonts/iconfont.css'
+
 Vue.config.productionTip = false
 
 new Vue({
