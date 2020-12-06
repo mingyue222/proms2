@@ -60,20 +60,26 @@
         <el-table-column prop="roleName" label="主管"> </el-table-column>
         <el-table-column prop="roleDesc" label="技术负责人"> </el-table-column>
         <el-table-column label="权限等级">
-          <template slot-scope="">
+          <template slot-scope="scope">
             <el-button size="mini" type="primary" icon="el-icon-edit" plain
               >编辑</el-button
             >
             <el-button size="mini" type="warning" icon="el-icon-delete" plain
               >删除</el-button
             >
-            <el-button size="mini" type="danger" icon="el-icon-setting" plain
-              >权限管理</el-button
+            <el-button size="mini" type="danger" icon="el-icon-setting" plain @click="showRightDialog(scope.row)">权限管理</el-button
             >
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+    <el-dialog title="分配权限" :visible.sync="setRightDialogVisible" width="30%" @close='getRolesDiog'>
+  <el-tree ref='treeRef' :data="rightList" :props="rightsListProps" show-checkbox default-expand-all node-key='id' :default-checked-keys='defKeys'></el-tree>
+  <span slot="footer" class="dialog-footer">
+    <el-button @click="setRightDialogVisible = false">取 消</el-button>
+    <el-button type="primary" @click="setRghts">确 定</el-button>
+  </span>
+</el-dialog>
   </div>
 </template>
 
@@ -81,7 +87,15 @@
 export default {
   data () {
     return {
-      rolesList: []
+      rolesList: [],
+      setRightDialogVisible: false,
+      rightList: [],
+      rightsListProps: {
+        label: 'authName',
+        children: 'children'
+      },
+      defKeys: [],
+      roleId: ''
     }
   },
   created () {
@@ -120,6 +134,40 @@ export default {
       // 因为 role 和 scope.row 在同一个内存空间，role 改变以后， scope.row 也会改变
       // 因此我们将后台返回的最新的权限数据赋值给 role.children 即可
       role.children = res.data
+    },
+    //  点击权限管理是获取列表
+    async showRightDialog (role) {
+      const { data: res } = await this.$http.get('rights/tree')
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+      this.rightList = res.data
+      this.roleId = role.id
+      this.getLetKeys(role, this.defKeys)
+      this.setRightDialogVisible = true
+    },
+    // 利用递归找到最底层的元素，即利用判断children属性判断在第几级
+    getLetKeys (node, arr) {
+      if (!node.children) return arr.push(node.id)
+      node.children.forEach(item => this.getLetKeys(item, arr))
+    },
+    // 监听这个数组 清空它
+    getRolesDiog () {
+      this.defKeys = []
+    },
+    // 点击添加角色的函数
+    async setRghts () {
+      const keys = [
+        ...this.$refs.treeRef.getCheckedKeys(),
+        ...this.$refs.treeRef.getHalfCheckedKeys()
+      ]
+
+      const newKeys = keys.join(',')
+      const { data: res } = await this.$http.post(`roles/${this.roleId}/rights`, { rids: newKeys })
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+      this.setRightDialogVisible = false
+      this.defKeys = res.data
+      this.getRolesList()
     }
   }
 }

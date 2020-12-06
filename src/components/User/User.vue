@@ -27,7 +27,9 @@
             </el-input>
           </el-col>
           <el-col :span="3">
-            <el-button type="info" @click="dialogVisible = true">添加用户</el-button>
+            <el-button type="info" @click="dialogVisible = true"
+              >添加用户</el-button
+            >
           </el-col>
         </el-row>
         <el-table :data="userList" style="width: 100%" border stripe>
@@ -89,6 +91,7 @@
                   icon="el-icon-s-tools"
                   type="warning"
                   plain
+                  @click="getEaidtRightsDio(scope.row)"
                 ></el-button>
               </el-tooltip>
             </template>
@@ -107,42 +110,51 @@
         >
         </el-pagination>
 
-       <!-- 点击添加 消息弹出的对话框 -->
+        <!-- 点击添加 消息弹出的对话框 -->
         <el-dialog
           title="添加用户"
           :visible.sync="dialogVisible"
           width="30%"
-          @close='restAddForm'
+          @close="restAddForm"
         >
-          <el-form :model="addForm" :rules="addFormRules" ref="addruleForm" label-width="100px" >
+          <el-form
+            :model="addForm"
+            :rules="addFormRules"
+            ref="addruleForm"
+            label-width="100px"
+          >
             <el-form-item label="用户" prop="username">
               <el-input v-model="addForm.username"></el-input>
             </el-form-item>
-             <el-form-item label="密码" prop="password">
-              <el-input v-model="addForm.password" ></el-input>
+            <el-form-item label="密码" prop="password">
+              <el-input v-model="addForm.password"></el-input>
             </el-form-item>
             <el-form-item label="邮箱" prop="email">
-              <el-input v-model="addForm.email" ></el-input>
+              <el-input v-model="addForm.email"></el-input>
             </el-form-item>
             <el-form-item label="电话" prop="mobile">
               <el-input v-model="addForm.mobile"></el-input>
             </el-form-item>
-
           </el-form>
           <span slot="footer" class="dialog-footer">
-            <el-button @click="dialogVisible = false" >取 消</el-button>
-            <el-button type="primary" @click="addUser">确 定</el-button
-            >
+            <el-button @click="dialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="addUser">确 定</el-button>
           </span>
         </el-dialog>
 
         <!-- 点击编辑的弹出框 -->
         <el-dialog
           title="修改"
-          :visible.sync="dialogAdit "
+          :visible.sync="dialogAdit"
           width="50%"
-          @click="editRestForm">
-          <el-form :model="editForm" :rules="editRules" ref="editRuleForm" label-width="100px" >
+          @click="editRestForm"
+        >
+          <el-form
+            :model="editForm"
+            :rules="editRules"
+            ref="editRuleForm"
+            label-width="100px"
+          >
             <el-form-item label="用户名" prop="username">
               <el-input v-model="editForm.username"></el-input>
             </el-form-item>
@@ -156,6 +168,32 @@
           <span slot="footer" class="dialog-footer">
             <el-button @click="dialogAdit = false">取 消</el-button>
             <el-button type="primary" @click="toEdit()">确 定</el-button>
+          </span>
+        </el-dialog>
+        <!-- 点击分配权限时的弹窗 -->
+        <el-dialog
+          title="用户权限"
+          :visible.sync="getDialogVisible"
+          width="50%">
+          <div>
+            <p>当前的用户：{{ userInfo.username }}</p>
+            <p>当前的角色：{{ userInfo.role_name }}</p>
+            <p>配置角色：
+               <el-select v-model="selectRoleId" placeholder="请选择">
+                <el-option
+                  v-for="item in roleList"
+                  :key="item.id"
+                  :label="item.roleName"
+                  :value="item.id">
+                </el-option>
+              </el-select>
+            </p>
+          </div>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="getDialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="savaRoleInfo"
+              >确 定</el-button
+            >
           </span>
         </el-dialog>
       </div>
@@ -219,7 +257,6 @@ export default {
         mobile: [
           { required: true, message: '请输入正确的手机号', trigger: 'blur' },
           { validator: checkMobile, trigger: 'blur' }
-
         ]
       },
       // 用来获取表单的数据
@@ -242,10 +279,12 @@ export default {
         mobile: [
           { required: true, message: '请输入正确的手机号', trigger: 'blur' },
           { validator: checkMobile, trigger: 'blur' }
-
         ]
-      }
-
+      },
+      getDialogVisible: false,
+      userInfo: {},
+      roleList: [],
+      selectRoleId: ''
     }
   },
   created () {
@@ -281,7 +320,7 @@ export default {
     },
     // 点击确定时进行表单预验证
     addUser () {
-      this.$refs.addruleForm.validate(async valid => {
+      this.$refs.addruleForm.validate(async (valid) => {
         if (!valid) return
         // 发起添加数据的请求
         const { data: res } = await this.$http.post('users', this.addForm)
@@ -309,9 +348,12 @@ export default {
     // 修改用户信息并修改
     toEdit () {
       // 对表单进行预校验
-      this.$refs.editRuleForm.validate(async valid => {
+      this.$refs.editRuleForm.validate(async (valid) => {
         if (!valid) return
-        const { data: res } = await this.$http.put(`users/${this.editForm.id}`, this.editForm)
+        const { data: res } = await this.$http.put(
+          `users/${this.editForm.id}`,
+          this.editForm
+        )
         console.log(res)
         if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
         this.$message.success(res.meta.msg)
@@ -323,18 +365,40 @@ export default {
     // 根据id删除用户表单
     async deletForm (id) {
       console.log(id)
-      const confirmRes = await this.$confirm('检测到表单的内容，是否永久删除？', '确认信息', {
-        distinguishCancelAndClose: true,
-        confirmButtonText: '删除',
-        cancelButtonText: '放弃删除',
-        type: 'warning'
-      }).catch(err => err)
+      const confirmRes = await this.$confirm(
+        '检测到表单的内容，是否永久删除？',
+        '确认信息',
+        {
+          distinguishCancelAndClose: true,
+          confirmButtonText: '删除',
+          cancelButtonText: '放弃删除',
+          type: 'warning'
+        }
+      ).catch((err) => err)
       console.log(confirmRes)
       if (confirmRes !== 'confirm') return
       const { data: res } = await this.$http.delete(`users/${id}`)
       if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
       this.$message.success(res.meta.msg)
       this.getUserList()
+    },
+    // 点击分配按钮时获得获得权限数据
+    async getEaidtRightsDio (userInfo) {
+      this.userInfo = userInfo
+      this.getDialogVisible = true
+      const { data: res } = await this.$http.get('roles')
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+      this.roleList = res.data
+    },
+    // 点击按钮分配角色
+    async savaRoleInfo () {
+      if (!this.selectRoleId) return this.$message.error('请选择要分配的角色')
+      const { data: res } = await this.$http.put(`users/${this.userInfo.id}/role`, { rid: this.selectRoleId })
+      if (res.meta.status !== 200) return this.$message.error(res.meta.msg)
+      this.$message.success(res.meta.msg)
+      this.getUserList()
+      this.getDialogVisible = false
     }
   }
 }
