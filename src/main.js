@@ -10,9 +10,10 @@ import 'element-ui/lib/theme-chalk/index.css'
 import './util/request.js'
 
 import './assets/fonts/iconfont.css'
+import ZkTable from 'vue-table-with-tree-grid'
 
 Vue.config.productionTip = false
-
+Vue.component('tree-table', ZkTable)
 new Vue({
   router,
   render: h => h(App)
